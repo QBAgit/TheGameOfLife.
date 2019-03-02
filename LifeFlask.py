@@ -66,21 +66,25 @@ def GameOfLife():
  
     if request.method == 'POST':
 
-        try:
-            if Year == 0:
-                gamemode = request.form['mode']
-                          
-                if gamemode == "random":
-                    genRandArea()
-                elif gamemode == "file":
-                    loadFileArea()
-                                
-        except Exception as E:
-            print("Error 01: " + str(E))
-            genRandArea()
 
+        if "next" in request.form:
+            Year += 1
+            modArea()
+            
         if "start" in request.form or GameStarted:
-
+            try:
+                if Year == 0:
+                    gamemode = request.form['mode']
+                              
+                    if gamemode == "random":
+                        genRandArea()
+                    elif gamemode == "file":
+                        loadFileArea()
+                                    
+            except Exception as E:
+                print("Error 01: " + str(E))
+                genRandArea()
+        
             GameStarted = True
             score = "<p3>Year: {}<br></p3>".format(Year)
             areahtml = drawHtmlArea()
@@ -91,10 +95,7 @@ def GameOfLife():
                 </form>'''
                         
             game += areahtml
-        
-        if "next" in request.form:
-            Year += 1
-            modArea()
+
 
     return buildwebpage(title + score + game)
 

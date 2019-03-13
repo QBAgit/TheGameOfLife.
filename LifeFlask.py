@@ -1,3 +1,5 @@
+from urllib import request
+
 import Life
 from my_module import buildwebpage
 from flask import Flask
@@ -9,51 +11,68 @@ area = []
 Year = 0
 GameStarted = False
 
-def drawHtmlArea():
+
+def draw_html_area(year):
     
     global area
     out = "<table>"
-    
-    for x in range(0,Life.scr_res[0]):
-        out+="<tr>"
+
+    if year >= len(area):
+        mod_area()
+    elif year < 0:
+        raise ValueError("Year < 0 => ListIndex Out of Range")
+
+    for x in range(0, Life.scr_res[0]):
+        out += "<tr>"
         
-        for y in range(0,Life.scr_res[1]):
-            out+="<td>{}</td>".format(area[x][y])
+        for y in range(0, Life.scr_res[1]):
+            out += "<td>{}</td>".format(area[year][x][y])
         
-        out+="</tr>"
+        out += "</tr>"
     
     out += "</table>"
     
     return out
 
 
-def genRandArea():
+def gen_rand_area():
+
+    print("DupoDebug: gen_rand_area()")
     
     global area
-    
-    empty = Life.create_empty_area(Life.scr_res)
-    box = Life.draw_box(Life.scr_res, empty)
-    area = Life.gen_rand_area(Life.scr_res, box, "o", 2)
+
+    if len(area) == 0:
+
+        empty = Life.create_empty_area(Life.scr_res)
+        box = Life.draw_box(Life.scr_res, empty)
+        area.append(Life.gen_rand_area(Life.scr_res, box, "o", 2))
+        print("DupoDebug: Line 48")
 
 
-def loadFileArea():
+def load_file_area():
+
+    global area
+    if len(area) == 0:
+        area.append(Life.load_area(Life.scr_res, "area.txt"))
+
+
+def mod_area():
     
     global area
-    area = Life.load_area(Life.scr_res, "area.txt")
 
-def modArea():
-    
-    global area
-    
-    area = Life.thisIsLife(Life.scr_res, area)
+    # Currnet years in the area
+    curr_year = len(area) - 1
+    # print("Debug: mod_area(): curr_year={}".format(curr_year))
 
-@app.route("/", methods=['GET','POST'])
-def GameOfLife():
+    area.append(Life.thisIsLife(Life.scr_res, area[curr_year]))
+
+
+@app.route("/", methods=['GET', 'POST'])
+def game_of_life():
     
     global Year
     global GameStarted
-    
-    
+
     title = "<h3>This a game of Life...</h3>"
     score = ""
     areahtml = ""
@@ -66,47 +85,50 @@ def GameOfLife():
  
     if request.method == 'POST':
 
-
         if "next" in request.form:
             Year += 1
-            modArea()
-            
+
+        if "prev" in request.form and Year > 0:
+            Year -= 1
+
+        if Year == 0:
+
+            if "mode" in request.form:
+
+                gamemode = request.form['mode']
+
+                if gamemode == "random":
+                    gen_rand_area()
+                elif gamemode == "file":
+                    load_file_area()
+            else:
+                gen_rand_area()
+
         if "start" in request.form or GameStarted:
-            try:
-                if Year == 0:
-                    gamemode = request.form['mode']
-                              
-                    if gamemode == "random":
-                        genRandArea()
-                    elif gamemode == "file":
-                        loadFileArea()
-                                    
-            except Exception as E:
-                print("Error 01: " + str(E))
-                genRandArea()
-        
+
             GameStarted = True
             score = "<p3>Year: {}<br></p3>".format(Year)
-            areahtml = drawHtmlArea()
+            areahtml = draw_html_area(Year)
             
             game = '''
                 <form method="POST">
+                    <input type="submit" name="prev" value="Prev">
                     <input type="submit" name="next" value="Next">
                 </form>'''
                         
             game += areahtml
 
-
-    return buildwebpage(title + score + game)
+    return buildwebpage(title + score + game, "The game of life")
 
 
 def main():
     global app
-    
+
     app.run()
     
-    #Na wypadek problemów z portem 5000
-    #app.run(port=4000)
+    # Na wypadek problemów z portem 5000
+    # app.run(port=4000)
+
 
 if __name__ == "__main__":
     main()
